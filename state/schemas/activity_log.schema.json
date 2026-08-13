@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "activity_log.schema.json",
+  "title": "Activity log — the cross-agent state bus",
+  "description": "Append-only, newest first. Every agent writes one entry per run; interactive sessions write one per consequential outcome.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["timestamp", "agent", "action", "details"],
+    "additionalProperties": true,
+    "properties": {
+      "timestamp": { "type": "string", "format": "date-time", "description": "UTC, ISO 8601. When the run finished." },
+      "agent": { "type": "string", "description": "Stable identifier matching the agent filename. Interactive sessions use a reserved name such as 'session'." },
+      "run": { "type": "integer", "minimum": 0, "description": "Monotonic per agent. Gaps are visible and meaningful." },
+      "action": { "type": "string", "description": "One line: what this run did, including the verdict." },
+      "details": { "type": "string", "description": "The numbers. Counts, prices, paths, identifiers. Other agents reason from this field." },
+      "affects": { "type": "array", "items": { "type": "string" }, "description": "Agents or workstreams that should care. Routing hint." },
+      "decisions": { "type": "array", "items": { "type": "string" }, "description": "One or two judgment calls as 'chose X over Y because Z'. The drift-detection record." }
+    }
+  }
+}

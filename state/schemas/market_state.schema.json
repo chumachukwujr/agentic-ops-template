@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "market_state.schema.json",
+  "title": "Market state — illustrative domain state file",
+  "description": "Substitute your own domain. The pattern worth keeping: discrete observations plus an unbroken time series appended on every scan.",
+  "type": "object",
+  "required": ["_schema_version", "_scan_number", "deals", "price_history"],
+  "properties": {
+    "_schema_version": { "type": "string" },
+    "_last_scan": { "type": ["string", "null"], "format": "date-time" },
+    "_scan_number": { "type": "integer", "minimum": 0 },
+    "deals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "source", "item", "meets_criteria"],
+        "properties": {
+          "date": { "type": "string", "format": "date", "description": "When observed. A price without a date is not a data point." },
+          "source": { "type": "string" },
+          "item": { "type": "string" },
+          "quantity_available": { "type": ["integer", "null"] },
+          "price_per_unit": { "type": ["number", "null"] },
+          "condition": { "enum": ["new", "reconditioned", "as-is", null] },
+          "seller": { "type": ["string", "null"] },
+          "lead_time_days": { "type": ["integer", "null"], "description": "Null means not stated, which makes the listing incomplete rather than conforming." },
+          "notes": { "type": "string" },
+          "meets_criteria": { "type": "boolean" },
+          "needs_verification": { "type": "boolean", "description": "True when the source could not be read directly. Record it; do not assert it and do not drop it." }
+        }
+      }
+    },
+    "price_history": {
+      "type": "array",
+      "description": "One entry per scan, appended whether or not anything moved. Gaps on quiet weeks make 'how long has this been stable' unanswerable.",
+      "items": {
+        "type": "object",
+        "required": ["date", "scan"],
+        "properties": {
+          "date": { "type": "string", "format": "date" },
+          "scan": { "type": "integer" },
+          "band_low": { "type": ["number", "null"] },
+          "band_high": { "type": ["number", "null"] },
+          "band_typical": { "type": ["number", "null"] },
+          "verdict": { "enum": ["FLAT", "RISING", "FALLING", "VOLATILE", null] }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "escalations.schema.json",
+  "title": "Escalations — items requiring a human decision",
+  "description": "Only things needing a decision. Cycle summaries and routine status belong in history.jsonl.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "date", "agent", "severity", "status", "title", "detail", "owner"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "pattern": "^ESC-[0-9]{4}-[0-9]{2}-[0-9]{2}-[A-Z0-9]+-[0-9]{2}$", "description": "ESC-<YYYY-MM-DD>-<AREA>-<NN>. Stable, so log entries can cite it." },
+      "date": { "type": "string", "format": "date" },
+      "opened": { "type": "string", "format": "date-time" },
+      "agent": { "type": "string" },
+      "run": { "type": "integer", "minimum": 0 },
+      "severity": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+      "status": { "enum": ["OPEN", "OPEN_ADVISORY", "RESOLVED", "SUPERSEDED", "STALE"], "description": "OPEN_ADVISORY is know-about-this, no decision required. Keeping it distinct stops the file becoming a newsfeed." },
+      "title": { "type": "string", "description": "One line: what decision is needed, not what was observed." },
+      "detail": { "type": "string", "description": "Numbers, source, and the consequence of not deciding." },
+      "owner": { "type": "string", "description": "Who must act. An escalation with no owner will not be actioned." },
+      "resolved": { "type": ["string", "null"], "format": "date-time" },
+      "resolution": { "type": ["string", "null"] }
+    }
+  }
+}

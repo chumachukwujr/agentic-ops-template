@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "outreach_tracker.schema.json",
+  "title": "Outreach tracker — external relationship state",
+  "type": "object",
+  "required": ["_schema_version", "contacts"],
+  "properties": {
+    "_schema_version": { "type": "string" },
+    "_last_updated": { "type": ["string", "null"], "format": "date-time" },
+    "contacts": {
+      "type": "object",
+      "description": "Keyed by contact slug.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["name", "status"],
+        "properties": {
+          "name": { "type": "string" },
+          "org": { "type": "string" },
+          "workstream": { "type": "string" },
+          "status": {
+            "enum": ["draft_pending_approval", "awaiting_approval", "sent", "replied", "on_hold", "closed", "exhausted"],
+            "description": "'sent' is set from the sent-folder record, never inferred from having drafted. 'exhausted' is terminal and stops further touches."
+          },
+          "touches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["date", "direction"],
+              "properties": {
+                "date": { "type": "string", "format": "date" },
+                "direction": { "enum": ["outbound", "inbound"] },
+                "channel": { "type": "string" },
+                "summary": { "type": "string" },
+                "reference_id": { "type": "string", "description": "Message id or equivalent. The proof that a 'sent' status is real." }
+              }
+            }
+          },
+          "next_action": { "type": "string" },
+          "next_action_date": { "type": ["string", "null"], "format": "date", "description": "Null when the trigger is an event rather than a date." }
+        }
+      }
+    }
+  }
+}

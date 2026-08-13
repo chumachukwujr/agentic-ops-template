@@ -1,0 +1,16 @@
+# This template ships empty. Real state never belongs in it.
+state/*.json
+state/*.jsonl
+state/drafts/
+state/archive/
+state/decisions/
+outputs/
+reports/
+!state/schemas/
+
+.DS_Store
+*.pyc
+__pycache__/
+.venv/
+.env
+.env.*
