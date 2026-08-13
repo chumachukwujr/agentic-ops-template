@@ -324,6 +324,41 @@ Be precise about what the chain proves: that the recorded history has not been a
 
 ---
 
+## Using this with an existing agent framework
+
+If you already run a self-hosted agent framework, this repo is additive rather than competing. The two solve different problems, and the split is clean:
+
+**A framework answers mechanism questions.** How does an agent execute, reach Telegram or Slack, call a tool, persist a conversation, run on a schedule, swap models. Frameworks in this category are good at that and getting better.
+
+**This repo answers policy questions.** What gets written down and in what shape, so another agent can act on it. Which source wins when four disagree. When an agent may act versus must stop and ask a human. How a rule you stated on Tuesday reaches every agent by Wednesday. How a confidently wrong value gets caught before it ships. How you prove six months later that the record was not altered.
+
+Frameworks deliberately do not answer those, and should not: policy varies per business, so a framework that hard-coded one operator's answers would be worse for everyone else. That is why the layers compose.
+
+### What becomes redundant
+
+**Pattern 4, pointer stubs, is unnecessary** if your framework already keeps prompts and context in files you version. That pattern exists to solve prompt-in-a-scheduler-UI, where the prompt cannot be diffed or reverted. If your setup already reads context files from disk, you have the property and can skip the mechanism.
+
+**Pattern 5's mechanics may partly exist already.** If your framework has a context-file convention that shapes every session, that is your standing-rules file. Keep it, and add the weekly maintainer loop around it: the file is the easy half, keeping it current is the hard half.
+
+### The distinction most worth understanding
+
+Several frameworks ship approval features, and it is easy to read those as covering Pattern 2. Check which layer they operate at. Pairing approval, command approval, and container isolation are **access control**: who may talk to the agent, which commands may run, what the process can reach. Necessary, and not the same question as **escalation policy**: this agent found a deal that meets the criteria, may it commit, or must it draft and wait for a human?
+
+An agent can be perfectly sandboxed, running only approved commands, from an approved channel, and still send a wrong number to a customer. Access control does not decide that. Escalation policy does.
+
+### What gets more important, not less
+
+- **Escalation discipline scales with your action surface.** A large plugin or skill ecosystem means more available actions, more third-party code, and more ways to be wrong unsupervised at 3am. More capability is an argument for a tighter act-versus-escalate line, not a looser one.
+- **Self-improving agents need a promotion gate.** If your framework generates or refines its own skills, something is rewriting the instructions your agents follow, autonomously. That is exactly what Pattern 5 governs: an agent proposes, a human promotes, the prior version is archived, and the delta is cited to its source. Self-improvement without a promotion gate is drift with better branding.
+- **Automated memory compaction is a governance decision.** Deciding what to forget is a policy call. Pattern 6's precedence order tells the compactor what it may never drop.
+- **The audit chain matters more when more is automated.** Pattern 7 is cheap, dependency-free, and does not care which framework produced the entries.
+
+### Practical composition
+
+Keep your framework as the runtime. Adopt the `state/` conventions as the shared surface your agents read and write, the standing-rules file plus maintainer loop as the policy layer, and the guard node and audit chain as the integrity layer. None of it requires the framework to know this repo exists: these are file conventions and prompt sections, and they work with any runner that can read and write a directory.
+
+---
+
 ## Repo layout
 
 ```
