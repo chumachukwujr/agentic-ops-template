@@ -313,8 +313,11 @@ The maintainer loop closes the gap: captures get merged into canon weekly and ma
 - **Shape.** Every load-bearing state file parses, recent log entries carry their required fields, enum fields hold known values.
 - **Magnitude.** Key metrics may not move more than ±25% between checks, and may not fall below a floor they genuinely cannot reach. A test suite does not shrink 91% overnight; a parse bug does that.
 - **Monotonicity.** Run counters only go up. A counter that went backwards is a sync failure, not history.
+- **Write-back.** The logging step at the end of every agent is a *request* in the prompt, and a weaker or hurried model completes the work and silently skips it. The guard turns the request into an enforced invariant: entries that identify no agent, agents present in the bus today but absent from the run history, and agents silent beyond three times their own observed cadence. Cadence is measured over distinct active days, so an agent that writes several lines per run is not mis-measured, and the partial-write-back check applies only to identities that have logged before, so interactive sessions are excluded without anyone maintaining an exemption list.
 
 The baseline updates only for values that passed, so a bad value cannot poison the next comparison. Findings are escalated, never auto-corrected — the source of record is reconciled by a human, because the guard cannot know which side is wrong.
+
+One design rule matters more than the checks themselves: **a guard that cries wolf gets ignored, which is worse than no guard.** The first version of this one produced four false positives on real data, because the log had grown two identity conventions and three timestamp keys over time. The fix was to normalise the variance and report it once as a NOTE that does not drive the exit code, rather than emit hundreds of findings. Separate the lines that demand action from the lines that are merely true.
 
 This pattern earned its place the hard way: the fleet this template is extracted from shipped a metric at 9% of its true value into its canonical context file, through an automated sync, with a fresh timestamp. A staleness check passed it. A magnitude check would have stopped it in the same second.
 
