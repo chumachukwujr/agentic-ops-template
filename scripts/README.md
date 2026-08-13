@@ -1,6 +1,25 @@
 # scripts
 
-Two generic utilities. Neither is required by the patterns in this repo; both are here because every fleet ends up needing something like them.
+Four generic utilities, dependency-free.
+
+## validate_state.py
+
+The guard node from Pattern 7. Shape checks (files parse, required fields present, enums sane), magnitude checks (key metrics within ±25% of the stored baseline, never below a stated floor), and monotonicity checks (run counters only go up). The baseline updates only for values that passed.
+
+```bash
+AGENT_STATE_DIR=/path/to/state python3 scripts/validate_state.py
+```
+
+Exit 1 with `FINDING:` lines means escalate, not auto-fix. Rename the two `platform_*_state.json` references to your own state files.
+
+## audit_chain.py
+
+Tamper-evident SHA-256 hash chain over the decision log (Pattern 7). `seal` is idempotent; `verify` recomputes from genesis; `verify --check-log` also confirms sealed entries still exist in the live log. See `GOVERNANCE.md` for what this does and does not prove.
+
+```bash
+AGENT_STATE_DIR=/path/to/state python3 scripts/audit_chain.py seal
+AGENT_STATE_DIR=/path/to/state python3 scripts/audit_chain.py verify --check-log
+```
 
 ## rotate_state.py
 

@@ -66,7 +66,7 @@ flowchart TB
     OP -->|decisions| AL
 ```
 
-Six patterns hold it together. Each is independently useful; together they are the system.
+Seven patterns hold it together. Each is independently useful; together they are the system.
 
 ---
 
@@ -302,6 +302,28 @@ The maintainer loop closes the gap: captures get merged into canon weekly and ma
 
 ---
 
+## Pattern 7 — Guard nodes and the audit chain
+
+**Problem:** the failure mode that actually hurts is not an agent that errors. It is an agent that succeeds with a wrong value, which then flows through the bus into every downstream decision. And when a number is wrong in your canonical context, freshness checks do not help: the wrong value is brand new.
+
+**Solution:** two small scripts with no dependencies, run on a schedule.
+
+**`scripts/validate_state.py`** is the guard node. It checks three classes of invariant that are nearly free to assert and catch most confidently-wrong values:
+
+- **Shape.** Every load-bearing state file parses, recent log entries carry their required fields, enum fields hold known values.
+- **Magnitude.** Key metrics may not move more than ±25% between checks, and may not fall below a floor they genuinely cannot reach. A test suite does not shrink 91% overnight; a parse bug does that.
+- **Monotonicity.** Run counters only go up. A counter that went backwards is a sync failure, not history.
+
+The baseline updates only for values that passed, so a bad value cannot poison the next comparison. Findings are escalated, never auto-corrected — the source of record is reconciled by a human, because the guard cannot know which side is wrong.
+
+This pattern earned its place the hard way: the fleet this template is extracted from shipped a metric at 9% of its true value into its canonical context file, through an automated sync, with a fresh timestamp. A staleness check passed it. A magnitude check would have stopped it in the same second.
+
+**`scripts/audit_chain.py`** makes the decision log tamper-evident. Every activity-log entry is sealed into an append-only SHA-256 hash chain — each record links to the previous, so any later mutation, deletion, or reordering of sealed history breaks verification from that point forward. `seal` is idempotent and runs from the weekly routine; `verify` proves the chain in milliseconds and its output is something you can hand to an auditor.
+
+Be precise about what the chain proves: that the recorded history has not been altered since sealing. It does not prove an entry was *true* when written — that is what the source-citation rules in the standing prompt are for. The two compose: citations make entries trustworthy going in, the chain keeps them trustworthy afterwards. See `GOVERNANCE.md` for how this maps to record-keeping expectations in common compliance frameworks, and for the claims you should not make.
+
+---
+
 ## Repo layout
 
 ```
@@ -322,7 +344,10 @@ The maintainer loop closes the gap: captures get merged into canon weekly and ma
 │       ├── escalations.schema.json
 │       ├── outreach_tracker.schema.json
 │       └── market_state.schema.json
+├── GOVERNANCE.md                      what the audit layer does and does not prove
 └── scripts/
+    ├── validate_state.py              guard node: shape, magnitude, monotonicity
+    ├── audit_chain.py                 tamper-evident SHA-256 chain over the log
     ├── rotate_state.py                tiered compression of state backups
     └── build_letterhead_pdf.py        HTML to PDF with correct footer placement
 ```
