@@ -10,12 +10,15 @@ This document maps that to the compliance frameworks operators most often face, 
 
 | Record | File | What it captures |
 |---|---|---|
-| Decision log | `state/activity_log.json` | Every run: what was done, the specifics, and 1-2 judgment calls in "chose X over Y because Z" form |
+| Decision log | `state/activity_log.jsonl` | Every run: what was done, the specifics, and 1-2 judgment calls in "chose X over Y because Z" form. Timestamps are stamped by the helper, not the agent. |
 | Complete run history | `state/history.jsonl` | Every run including no-ops, append-only |
-| Escalations | `state/escalations.json` | Every item referred to a human: severity, owner, resolution |
+| Escalations | `state/escalations.json` | Every item referred to a human: severity, owner, resolution. One writer; every other agent's request arrives over the bus and is folded with its message id attached. |
+| Cross-agent requests | `state/agent_messages.jsonl` | Who asked whom for what, and who acknowledged it, with dispositions |
+| Write attribution | `state/_writes.jsonl` | Which agent replaced which state file, when, at what size. The answer to "which run changed this". |
 | Human approvals | Escalation status transitions + the two-way bus | Which human decided, and when the decision re-entered the system |
-| Standing rules over time | `config/strategy_prompt.md` + `config/archive/` | Which rules were in force at any date, and when each changed |
-| Incident record | The anti-patterns section | Each failure, its correction, and the rule that prevents recurrence |
+| Standing rules over time | `config/canon/`, `routines/rules/` (git history) + `config/strategy_changelog.md` | Which rules were in force at any date, and when each changed; `last_verified` on every note says when a human last confirmed it |
+| Fleet roster and schedule | `agents/REGISTRY.json` (git history) | Which agents were registered, on what schedule, owning which files, at any date |
+| Incident record | `config/canon/anti-patterns.md` | Each failure, its correction, and the rule that prevents recurrence. Numbered and append-only, so citations stay valid. |
 | Tamper-evidence | `state/audit_chain.jsonl` | SHA-256 hash chain over the decision log; `verify` proves integrity |
 
 Two properties an auditor will care about:

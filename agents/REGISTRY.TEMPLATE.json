@@ -1,0 +1,125 @@
+{
+  "_meta": {
+    "title": "<ORG> fleet registry",
+    "_doc": [
+      "TEMPLATE. Rename to REGISTRY.json and replace the placeholders. This file is the source of truth for",
+      "WHO runs (agents[]), WHEN (registration.cron, in schedule_tz), UNDER WHICH NAME they log",
+      "(history_identity + history_aliases), and WHO MAY WRITE WHAT (state_files). scripts/state_io.py",
+      "enforces state_files; scripts/fleet_watch.py reads the schedules; scripts/registry_stubs.py renders",
+      "the scheduler stubs from it. Edit this file, never the stubs.",
+      "",
+      "A 'beat' is one routine prompt registered several times on different schedules, each with its own",
+      "id, history_identity and (optionally) a `beat` value the routine branches on. Beats share an owner",
+      "through agent_aliases, so any beat may write the routine's files; they do NOT share a run counter.",
+      "",
+      "agents[].history_aliases = spelling variants of THAT agent's own identity (used by the run counter",
+      "and the liveness check). agent_aliases (top level) = the routine's alias GROUP across beats (used by",
+      "ownership and the inbox). Keep the two distinct: merging them lets one beat's run mask another's silence."
+    ],
+    "schedule_tz": "<IANA timezone, e.g. Europe/London - every cron below is local to this>",
+    "last_verified": "<DATE>"
+  },
+  "agents": [
+    {
+      "id": "<ORG>-intel-market",
+      "routine": "agents/intel.md",
+      "beat": "market",
+      "history_identity": "intel-market",
+      "history_aliases": ["market-monitor"],
+      "registration": {
+        "cron": "0 23 * * 1-5",
+        "schedule_human": "weeknights 23:00",
+        "enabled": true,
+        "scheduler": "<claude-code-routine | cron | other>"
+      },
+      "prompt": {
+        "canonical": "<ABSOLUTE_PATH>/agents/intel.md",
+        "live_stub": "<TASK_DIR>/<ORG>-intel-market/SKILL.md"
+      }
+    },
+    {
+      "id": "<ORG>-intel-regulatory",
+      "routine": "agents/intel.md",
+      "beat": "regulatory",
+      "history_identity": "intel-regulatory",
+      "registration": {
+        "cron": "30 0 * * 1-5",
+        "schedule_human": "weekdays 00:30",
+        "enabled": true,
+        "scheduler": "<claude-code-routine | cron | other>"
+      },
+      "prompt": {
+        "canonical": "<ABSOLUTE_PATH>/agents/intel.md",
+        "live_stub": "<TASK_DIR>/<ORG>-intel-regulatory/SKILL.md"
+      }
+    },
+    {
+      "id": "<ORG>-daily-guard",
+      "routine": "routines/daily-guard.md",
+      "history_identity": "daily-guard",
+      "registration": {
+        "cron": "15 7 * * *",
+        "schedule_human": "daily 07:15, after the overnight agents and before the briefing",
+        "enabled": true,
+        "scheduler": "<claude-code-routine | cron | other>"
+      },
+      "prompt": {
+        "canonical": "<ABSOLUTE_PATH>/routines/daily-guard.md",
+        "live_stub": "<TASK_DIR>/<ORG>-daily-guard/SKILL.md"
+      }
+    },
+    {
+      "id": "<ORG>-briefing",
+      "routine": "agents/briefing.md",
+      "history_identity": "briefing",
+      "registration": {
+        "cron": "30 7 * * *",
+        "schedule_human": "daily 07:30",
+        "enabled": true,
+        "scheduler": "<claude-code-routine | cron | other>"
+      },
+      "prompt": {
+        "canonical": "<ABSOLUTE_PATH>/agents/briefing.md",
+        "live_stub": "<TASK_DIR>/<ORG>-briefing/SKILL.md"
+      }
+    },
+    {
+      "id": "<ORG>-maintainer",
+      "routine": "routines/maintainer.md",
+      "history_identity": "maintainer",
+      "registration": {
+        "cron": "0 23 * * 0",
+        "schedule_human": "Sunday 23:00",
+        "enabled": true,
+        "scheduler": "<claude-code-routine | cron | other>"
+      },
+      "prompt": {
+        "canonical": "<ABSOLUTE_PATH>/routines/maintainer.md",
+        "live_stub": "<TASK_DIR>/<ORG>-maintainer/SKILL.md"
+      }
+    }
+  ],
+  "agent_aliases": {
+    "intel": ["intel-market", "intel-regulatory"],
+    "daily-guard": [],
+    "briefing": [],
+    "maintainer": []
+  },
+  "state_files": {
+    "state/history.jsonl":        {"mode": "append-only",   "owner": "all",         "note": "one line per run via log_run(); decisions required"},
+    "state/activity_log.jsonl":   {"mode": "append-only",   "owner": "all",         "note": "the bus; append_event()"},
+    "state/agent_messages.jsonl": {"mode": "append-only",   "owner": "all",         "note": "message bus; send / inbox / ack"},
+    "state/_writes.jsonl":        {"mode": "append-only",   "owner": "all",         "note": "audit sidecar written by the helper; never by hand"},
+    "state/escalations.json":     {"mode": "single-writer", "owner": "daily-guard", "note": "everyone else: raise_escalation() -> bus -> folded by the owner"},
+    "state/market_state.json":    {"mode": "single-writer", "owner": "intel"},
+    "state/outreach_tracker.json": {"mode": "single-writer", "owner": "<outreach-routine>"},
+    "state/company_state.md":     {"mode": "single-writer", "owner": "briefing",    "note": "read first, every run"},
+    "state/audit_chain.jsonl":    {"mode": "single-writer", "owner": "daily-guard"},
+    "state/validate_baseline.json": {"mode": "single-writer", "owner": "daily-guard", "note": "written by validate_state.py during the guard run"},
+    "state/now/**":               {"mode": "single-writer", "owner": "daily-guard", "note": "GENERATED tier; never hand-edited"},
+    "state/decisions/":           {"mode": "single-writer", "owner": "human",       "note": "session captures; agents only touch frontmatter via mark_decision_delivered()"},
+    "state/drafts/":              {"mode": "single-writer", "owner": "author"},
+    "state/archive/**":           {"mode": "single-writer", "owner": "<housekeeping-routine>"},
+    "state/legacy_counters.json": {"mode": "frozen",        "owner": null,          "note": "example of a retired file nobody may write"}
+  }
+}
