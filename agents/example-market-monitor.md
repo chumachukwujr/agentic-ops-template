@@ -40,12 +40,22 @@ If a scan surfaces something that appears to conflict with the premise above, do
 
 ## STEP 1: LOAD STATE
 
+Before reading anything, take your run number and your inbox:
+
+```bash
+RUN=$(python3 scripts/state_io.py next-run --agent market-monitor)
+python3 scripts/state_io.py inbox --agent market-monitor
+python3 scripts/state_io.py decisions --agent market-monitor
+```
+
+Act on each message or say why not, then `state_io.py ack`. A run that ends with unacked messages is a failed run.
+
 Read in this order. Stop reading as soon as you have what you need; this is a cheap step that becomes expensive if you read everything.
 
 0. **`state/company_state.md`** — the synthesized brief. Current priorities, what other agents are doing, canonical facts. Read this FIRST for the picture, then the raw sources below for anything since it was written.
-1. **`state/activity_log.json`** — what the operator and other agents have done since your last run. Filter to entries whose `affects` names you, plus anything tagged with your workstream.
+1. **`state/activity_log.jsonl`** — what the operator and other agents have done since your last run. Filter to entries whose `affects` names you, plus anything tagged with your workstream.
 2. **`state/market_state.json`** — your own prior scans. Last scan number, current price bands, deals already recorded.
-3. **`config/strategy_prompt.md`** — standing rules. Anti-patterns bind you.
+3. **`routines/rules/market-monitor.md`** — your standing rules, and the canon notes it points at. If a note is past its TTL, say so. Anti-patterns in `config/canon/anti-patterns.md` bind you; cite them by number.
 4. **`CONTEXT.md`** — durable facts: current purchase criteria, budget ceiling, who owns this workstream.
 
 ---
@@ -108,34 +118,28 @@ Append the observed price band to `price_history[]` each scan, whether or not it
 
 ## STEP 4: ESCALATE IF MATCHED
 
-Write to `state/escalations.json` only when one of these fires:
+Raise an escalation only when one of these fires:
 
 - A conforming listing sits below `<PRICE_THRESHOLD>` (a purchase decision is now available)
 - A conforming listing shows lead time under `<LEAD_TIME_THRESHOLD>` days
 - The price band moves more than `<MOVE_PCT>` in either direction versus the prior scan
 - A regulatory change affects this commodity (see STEP 5)
 
-Entry shape:
+Through the helper; you do not own `state/escalations.json`:
 
-```json
-{
-  "id": "ESC-<YYYY-MM-DD>-MARKET-<NN>",
-  "date": "YYYY-MM-DD",
-  "agent": "market-monitor",
-  "run": 0,
-  "severity": "LOW | MEDIUM | HIGH | CRITICAL",
-  "status": "OPEN",
-  "title": "One line. What decision is needed.",
-  "detail": "The numbers, the source, and what happens if this is not decided.",
-  "owner": "<ROLE>"
-}
+```bash
+python3 scripts/state_io.py escalate --agent market-monitor --severity HIGH --run "$RUN" \
+  --title "One line. What decision is needed." \
+  --detail "The numbers, the source, and what happens if this is not decided."
 ```
+
+The helper routes it over the bus to the daily guard, which folds it into the file the next morning. The briefing reads both, so nothing waits on the fold. The id is derived from your identity, the date and the title; pass `--id` only when a later run must find this exact entry again.
 
 A cycle summary is not an escalation. A flat market is not an escalation. Those go to `history.jsonl`.
 
 **Backpressure.** If more than `<N>` escalations are already OPEN in this workstream, do not open another below HIGH severity. Record the finding in the run entry, note that you are gate-bound, and move on.
 
-**OBSERVE mode reminder.** For the top 3 conforming listings, write ready-to-send enquiry text into the run report — asking for total price, firm lead time, grade documentation, and payment terms — for a human to send. Log the proposed contacts in `state/outreach_tracker.json` with status `draft_pending_approval`. Do not contact anyone.
+**OBSERVE mode reminder.** For the top 3 conforming listings, write ready-to-send enquiry text into the run report — asking for total price, firm lead time, grade documentation, and payment terms — for a human to send. Send the proposed contacts to the outreach agent over the bus (`state_io.py send --from market-monitor --to outreach --subject "3 conforming sellers" --body "..."`); it owns `state/outreach_tracker.json` and records them with status `draft_pending_approval`. You do not write that file. Do not contact anyone.
 
 ---
 
@@ -156,25 +160,33 @@ Live portal data outranks third-party summaries. Guides are useful for context, 
 
 **Do not skip this step, and do not shorten it on a quiet run.** An unlogged run is invisible to the rest of the fleet, and a quiet run is itself information.
 
-1. Update `state/market_state.json`: increment `_scan_number`, set `_last_scan`, append to `deals[]` and `price_history[]`.
-2. Prepend an entry to `state/activity_log.json`:
+Every write goes through the helper. It stamps the timestamp, derives the run number, and refuses a history line without `decisions`.
 
-```json
-{
-  "timestamp": "<ISO8601>",
-  "agent": "market-monitor",
-  "run": 0,
+1. Update `state/market_state.json`: increment `_scan_number`, set `_last_scan`, append to `deals[]` and `price_history[]`. Write the whole file back as its owner:
+
+```bash
+python3 scripts/state_io.py write market_state.json --agent market-monitor --from-file /tmp/market_state.json
+```
+
+2. Append an entry to the bus:
+
+```bash
+python3 scripts/state_io.py append activity_log.jsonl --agent market-monitor --json '{
+  "run": '"$RUN"',
   "action": "Scan <N>: <one line, including the verdict — FLAT, MOVING, or CONFORMING LISTING FOUND>",
   "details": "Sources scanned, listings recorded, price band with dates, what was disqualified and why, anything marked needs_verification.",
   "affects": ["procurement", "briefing"],
-  "decisions": [
-    "chose X over Y because Z",
-    "did not escalate <finding> because <reason>"
-  ]
-}
+  "decisions": ["chose X over Y because Z", "did not escalate <finding> because <reason>"]
+}'
 ```
 
-3. Append one line to `state/history.jsonl`, including on a no-op run.
+3. Log the run, including on a no-op run:
+
+```bash
+python3 scripts/state_io.py log-run --agent market-monitor --json '{"summary": "<one line>", "listings": <n>, "decisions": ["..."]}'
+```
+
 4. Write the run report to `outputs/market/<YYYY-MM-DD>_scan_<N>.md`, including the draft enquiry text from STEP 4.
+5. `python3 scripts/state_io.py inbox --agent market-monitor` must print `[]`.
 
 The `decisions` field is not optional and is not decoration. It is the record you diff after a model upgrade to find out whether this agent still reasons the way it used to.

@@ -18,7 +18,7 @@
 -->
 
 > **Last synced:** <DATE> — <one-line summary of what changed this sync.>
-> **Source-of-truth note:** decisions captured in `state/decisions/` after this date **outrank** this file. See §7 of the standing rules.
+> **Source-of-truth note:** decisions captured in `state/decisions/` after this date **outrank** this file. See "Standing agent rules" below.
 
 ## What this is
 
@@ -58,6 +58,8 @@ The numbers and identifiers that must never drift. Whatever your equivalents are
 
 > Numbers in this file are descriptive snapshots, not current truth. Before any figure enters an external document, read it from its source of record and reconcile.
 
+Once the GENERATED tier is running (Pattern 11), this section shrinks: counts, last-run ages, open escalations and anything else derivable from a state file come from `state/now/state.md` and are not written here at all. What stays here is the fact that cannot be generated: a threshold the operator chose, a date that was agreed, a name.
+
 ## Naming and entity discipline
 
 The exact names, and where each belongs. Legal names, product names, the public-facing short form, and anything that must never appear in external material.
@@ -87,7 +89,23 @@ Name the trigger that lifts each restriction. Restrictions with no stated end co
 
 ## Standing agent rules
 
-Anything every agent must do or never do that is not already in the standing-rules file. Keep this short; if it grows, it belongs in `config/strategy_prompt.md`.
+Anything every agent must do or never do that is not already in a canon note or a rules file. Keep this short; if it grows, it belongs in `routines/rules/<routine>.md` or `config/canon/`.
+
+Two things belong here because every session loads this file and nothing else is guaranteed to be loaded:
+
+**Source-of-truth precedence.** Higher wins; within a tier, newer wins.
+
+1. `<OWNER>`'s direct words in the current session
+2. Decision captures in `state/decisions/`
+3. This file
+4. Canon notes in `config/canon/` and rules files in `routines/rules/`
+5. State files, agent outputs, briefings
+
+Never "correct" a newer decision capture against older canon. Flag the conflict; do not revert it.
+
+**Freshness.** Every canon note and rules file carries `last_verified` and `ttl_days`. A note past its TTL is **SUSPECT**: say so in your output rather than acting on it silently.
+
+**State writes** go through `scripts/state_io.py`; the ownership map is `agents/REGISTRY.json`. Escalations via `state_io.py escalate`. Numbers come from `state/now/state.md`, never from a document or memory.
 
 ## Model continuity
 
@@ -95,6 +113,6 @@ Record which model the fleet is validated against and when:
 
 > **Model tested:** `<MODEL>` — validated `<DATE>`.
 
-When the active model changes, run a shadow period of 48 hours or four to six scheduled runs before retiring the prior baseline. Diff the `decisions` field in `state/activity_log.json` across the boundary. If the new model makes materially different calls on the same inputs, fix the **prompt** rather than arguing with the model at runtime — a model that has become more cautious usually needs the premise stated explicitly, which is what STEP 0 in the example agent is for.
+When the active model changes, run a shadow period of 48 hours or four to six scheduled runs before retiring the prior baseline. Diff the `decisions` field in `state/history.jsonl` across the boundary. If the new model makes materially different calls on the same inputs, fix the **prompt** rather than arguing with the model at runtime — a model that has become more cautious usually needs the premise stated explicitly, which is what STEP 0 in the example agent is for.
 
 Log what you find here, including the incidents. The record of what broke and how it was fixed is worth more than the version number.

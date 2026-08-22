@@ -4,13 +4,24 @@ state/*.jsonl
 state/drafts/
 state/archive/
 state/decisions/
+state/proposed/
 outputs/
 reports/
 !state/schemas/
 
+# Pattern 8: advisory lock files written by state_io.py
+state/.locks/
+
+# Pattern 10: the dead-man's-switch ping URL is a capability URL. Never commit it.
+config/heartbeat_url.txt
+
+# Pattern 11: the GENERATED tier, rewritten by the daily guard every morning
+state/now/
+
 .DS_Store
 *.pyc
 __pycache__/
+.pytest_cache/
 .venv/
 .env
 .env.*
