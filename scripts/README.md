@@ -54,7 +54,7 @@ Pattern 11, the live-numbers note. Writes `state/now/state.md` from the state fi
 
 ## generate_resume_prompt.py
 
-Pattern 11, the human resume prompt. Writes `state/now/resume_prompt.md` from `CONTEXT.md`, selected sections of the canon notes (edit `RESUME_SOURCES`), the anti-pattern titles, and two sections of the live-numbers note. Every canon note's TTL is checked and a note past its TTL is flagged SUSPECT at the top. Refuses to write past a size cap. `--dry-run`, `--check`.
+Pattern 11, the human resume prompt. Writes `state/now/resume_prompt.md` from `CONTEXT.md`, selected sections of the canon notes (edit `RESUME_SOURCES`; a lettered subsection such as `"3a"` is listed by name, and one you left out is named in the freshness block), the anti-pattern titles, and two sections of the live-numbers note. Every canon note's TTL is checked and a note past its TTL is flagged SUSPECT at the top. Refuses to write past a size cap. `--dry-run`, `--check`.
 
 ## validate_state.py
 

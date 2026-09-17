@@ -143,3 +143,26 @@ def test_resume_prompt_size_cap(env, monkeypatch):
     (root / "CONTEXT.md").write_text("x" * 50_000)
     with pytest.raises(SystemExit):
         r.write()
+
+
+# ---------------------------------------------------------------- lettered subsections
+CANON_LETTERED = ("---\ntitle: Terms\ntier: canon\nlast_verified: 2099-01-01\nttl_days: 30\nowner: operator\n---\n\n"
+                  "# Naming\n\n## 1. Legal names\n\nThe entity list.\n\n## 1a. Short forms\n\nThe brand name, unqualified.\n\n## 2. Next\n\nx\n")
+
+
+def test_unlisted_lettered_subsection_is_flagged_not_silently_dropped(env, monkeypatch):
+    """The canon README says append rather than renumber, so a note that grows between two sections
+    gets a `## 1a.`. `section(t, 1)` stops at the next `## ` heading and never carries it. Listing
+    `1` and expecting `1a` to ride along is a silent omission from the resume prompt - the class of
+    failure this template exists to make visible - so the freshness block names it."""
+    root, r = env["root"], env["resume"]
+    (root / "CONTEXT.md").write_text("# Context\n")
+    (root / "config" / "canon" / "entities.md").write_text(CANON_LETTERED)
+    monkeypatch.setattr(r, "RESUME_SOURCES", [("config/canon/entities.md", [1])])
+    text = r.build()
+    assert "Short forms" not in text, "1 does not carry 1a"
+    assert "entities.md: has §1a, not in RESUME_SOURCES" in text, "the omission must be visible at the top"
+    monkeypatch.setattr(r, "RESUME_SOURCES", [("config/canon/entities.md", [1, "1a"])])
+    text = r.build()
+    assert "## 1a. Short forms\n\nThe brand name, unqualified.\n" in text and "has §1a" not in text
+    assert "(sections 1, 1a)" in text

@@ -9,7 +9,7 @@ so it cannot drift from canon: to change a rule, change the canon note it came f
 
 Sources (edit RESUME_SOURCES to fit your vault):
   CONTEXT.md                         verbatim
-  config/canon/<note>.md             selected `## N.` sections, TTL-checked
+  config/canon/<note>.md             selected `## N.` sections (lettered ones listed by name), TTL-checked
   config/canon/anti-patterns.md      numbered titles only (cite by number; full text stays in canon)
   state/now/state.md                 the generated live-numbers note: selected sections
 Every canon note's TTL is checked; a note past its TTL is flagged SUSPECT at the top.
@@ -23,7 +23,9 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import state_io as sio  # noqa: E402
 
-# (relative path under the repo root, [section numbers to include]); [] means the whole body
+# (relative path under the repo root, [section numbers to include]); [] means the whole body.
+# A lettered subsection is its own entry: [3, "3a"]. Listing 3 does not carry 3a, and the freshness
+# block at the top of the prompt says so when a note has one you did not list.
 RESUME_SOURCES = [
     ("config/canon/entities.md", [1]),
     ("config/canon/voice.md", [1, 3]),
@@ -56,13 +58,30 @@ def _body(text: str) -> str:
     return re.sub(r"^---\n.*?\n---\n", "", text, count=1, flags=re.S)
 
 
-def section(text: str, number: int) -> str:
-    """Body of `## <number>.` up to the next `## ` heading, heading line included."""
+def section(text: str, number: int | str) -> str:
+    """Body of `## <number>.` up to the next `## ` heading, heading line included. `number` may be a
+    lettered subsection ("3a"): `## 3a.` is its own heading, so `section(t, 3)` stops before it."""
     m = re.search(rf"^## {number}\.[^\n]*\n(.*?)(?=^## |\Z)", text, re.S | re.M)
     if not m:
         return ""
     head = text[m.start():text.index("\n", m.start())]
     return head + "\n" + m.group(1).rstrip() + "\n"
+
+
+def unlisted_subsections(text: str, secs: list) -> list:
+    """Lettered subsections (`## 3a.`) whose parent number is listed but which are not listed
+    themselves. The canon README says append rather than renumber, so a note that grows between two
+    sections gets a lettered heading, and a selected parent never carries it. Left alone, that is a
+    canon section silently missing from the resume prompt: the class of failure this repo exists to
+    make visible. build() prints one line per miss in the freshness block."""
+    listed = {str(x) for x in secs}
+    parents = {x for x in listed if x.isdigit()}
+    out = []
+    for m in re.finditer(r"^## (\d+)([a-z])\.", text, re.M):
+        sid = m.group(1) + m.group(2)
+        if m.group(1) in parents and sid not in listed:
+            out.append(sid)
+    return out
 
 
 def named_section(text: str, title: str) -> str:
@@ -104,6 +123,10 @@ def build() -> str:
     notes = [(p, _read(root / p)) for p, _ in RESUME_SOURCES] + [(ANTI_PATTERNS, _read(root / ANTI_PATTERNS))]
     for p, t in notes:
         L.append(f"- {ttl_flag(os.path.basename(p), t) if t else os.path.basename(p) + ': not found'}")
+    for p, secs in RESUME_SOURCES:
+        for sid in unlisted_subsections(_read(root / p), secs):
+            L.append(f"- {os.path.basename(p)}: has §{sid}, not in RESUME_SOURCES - a listed section does not carry "
+                     f"its lettered subsections; list \"{sid}\" to include it")
     L += ["", "## A. Operating context (verbatim: CONTEXT.md)", "", _read(root / "CONTEXT.md").rstrip() or "(CONTEXT.md not found)", ""]
     letter = ord("B")
     for p, secs in RESUME_SOURCES:
