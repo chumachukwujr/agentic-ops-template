@@ -12,7 +12,9 @@ source_of_truth: <registry, filing, contract, or "this file">
 <!--
   One canon note per topic. Number the sections (## 1., ## 2., ...) because the resume-prompt
   generator and the rules files cite them by number: "entities.md §1". Renumbering breaks
-  citations, so append rather than reorder.
+  citations, so append rather than reorder. To insert between two sections, letter it (## 3a.)
+  and list it in the generator's RESUME_SOURCES by itself: 3 does not carry 3a, and the
+  resume prompt's freshness block says so if you forget.
 
   Each section: the fact or rule, stated once, with the date it was established if that matters.
   No live numbers. No narrative. If a section needs more than a screen, it is probably two notes.
